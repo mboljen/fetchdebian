@@ -1,0 +1,292 @@
+#!/usr/bin/env bash
+#
+# Created:         Mo 2019-08-26 11:19:26 CEST
+# Last Modified:   Di 2021-04-27 00:36:08 CEST
+#
+# fetchdebian:
+#   Downloads latest Debian installation media and saves
+#   the downloaded files to the given path.
+
+
+# Help text
+usage () {
+cat << EOF
+
+Usage: fetchdebian [options] [codename]
+
+OPTIONS:
+  -p <path>   Specify download folder (default: current directory)
+  -a <arch>   Specify software architecture (default: amd64)
+  -d <name>   Specify desktop environment (default: gnome)
+  -u <url>    Specify URL of server (default: https://cdimage.debian.org/cdimage)
+  -l <rate>   Limit bandwidth (default: 4M)
+  -h          Show this message
+EOF
+}
+
+
+#
+declare -A codename
+
+codename[5]="Lenny"
+codename[6]="Squeeze"
+codename[7]="Wheezy"
+codename[8]="Jessie"
+codename[9]="Stretch"
+codename[10]="Buster"
+codename[11]="Bullseye"
+codename[12]="Bookworm"
+codename[13]="Trixie"
+
+
+# Initialization
+BASEURL="https://cdimage.debian.org/cdimage"
+LRATE=4M
+DESTDIR=$(pwd)
+ARCH="amd64"
+DE="gnome"
+CURL=$(command -v curl)
+WGET=$(command -v wget)
+
+
+# Process options
+while getopts "h?p:a:d:u:l:" OPTION
+do
+    case "${OPTION}"
+    in
+        p)  DESTDIR="${OPTARG}"
+            echo "DESTDIR = $DESTDIR"
+            ;;
+        a)  ARCH="${OPTARG}"
+            echo "ARCH = $ARCH"
+            ;;
+        d)  DE="${OPTARG}"
+            echo "DE = $DE"
+            ;;
+        u)  URL="${OPTARG}"
+            echo "URL = $URL"
+            ;;
+        l)  LRATE="${OPTARG}"
+            echo "LRATE = $LRATE"
+            ;;
+        h|\?)
+            usage
+            exit 0
+            ;;
+    esac
+done
+
+
+# Check if curl exists
+if [ ! -x "$CURL" ]
+then
+    echo "curl not available, probably not installed"
+    exit 1
+fi
+
+
+# Check if wget exists
+if [ ! -x "$WGET" ]
+then
+    echo "wget not available, probably not installed"
+    exit 1
+fi
+
+
+# Check destination directory
+if [ ! -d "$DESTDIR" ]
+then
+    echo "Directory '$DESTDIR' does not exist"
+    usage
+    exit 1
+fi
+
+
+# Check if software architecture is valid
+if [[ ! $ARCH =~ ^(amd64|arm64|armel|armhf|i386|mips|mips64el|mipsel|multi-arch|ppc64el|s390x|source|trace)$ ]]
+then
+    echo "Invalid architecture '$ARCH'"
+    usage
+    exit 1
+fi
+
+
+# Check if desktop environment is ok
+if [[ ! $DE =~ ^(cinnamon|gnome|kde|lxde|lxqt|mate|standard|xfce)$ ]]
+then
+    echo "Invalid desktop environment '$DE'"
+    usage
+    exit 1
+fi
+
+
+# Skip options and shift index
+shift $((OPTIND-1))
+
+
+# Fetch current version
+readarray -t current < <( $CURL -s "$BASEURL/release/" | grep -Eoi "href=\"[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+/\"" | sed 's/^href=\"//;s/\/\"$//' | uniq | sort -V )
+
+
+# Use current version if no parameter is set
+if [ "$#" -eq 0 ]
+then
+    PAR=( ${current[-1]} )
+else
+    PAR=( "$@" )
+fi
+
+
+# Fetch list of archived versions
+readarray -t versionlist < <( $CURL -s "$BASEURL/archive/" | grep -Eoi "href=\"[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+/\"" | sed 's/^href=\"//;s/\/\"$//' | uniq | sort -V )
+
+
+# Add current to version list
+versionlist+=( "${current[@]}" )
+
+
+# Set stable release number
+stable=$( echo ${current[-1]} | grep -Eoi "^[[:digit:]]+" )
+
+
+#
+version=
+url=
+
+
+#
+function setversion () {
+
+    # Argument is codename or version number
+    local found=
+    for i in "${versionlist[@]}"
+    do
+        if [[ $i =~ ^$1 ]]
+        then
+            found=$i
+        fi
+    done
+
+    #
+    if [ ! -z "$found" ]
+    then
+        #
+        version=$found
+    fi
+
+}
+
+
+# Loop over codenames
+for arg in "${PAR[@]}"
+do
+
+
+    # Reset variables
+    version=
+    url=
+    live=0
+
+
+    # Check if live
+    if [[ ${arg,,} =~ -live$ ]]
+    then
+        live=1
+        arg=$( echo $arg | sed 's/-live$//i'  )
+    fi
+
+
+    # Try to match codename
+    for i in "${!codename[@]}"
+    do
+        if [[ ${codename[$i],,} =~ ^${arg,,} ]]
+        then
+            echo "found version $i = $arg"
+            version=$i
+            if [ $version -eq $((stable+1)) ]
+            then
+                arg=testing
+            elif [ $version -gt $stable ]
+            then
+                echo "not yet available, use testing"
+                exit 1
+            fi
+        fi
+    done
+
+
+    #
+    if [ ! -z "$version" ]
+    then
+        arg=$version
+    fi
+
+
+    #
+    if [[ $arg =~ ^testing ]]
+    then
+
+        #
+        version=$((stable+1))
+        if [ $live -eq 0 ]
+        then
+            url="$BASEURL/weekly-builds/$ARCH/iso-cd/debian-testing-amd64-netinst.iso"
+        else
+            url="$BASEURL/weekly-live-builds/$ARCH/iso-hybrid/debian-live-testing-$ARCH-$DE.iso"
+        fi
+
+    elif [[ $arg =~ ^stable ]] || [[ $arg =~ ^current ]]
+    then
+
+        #
+        setversion $stable
+        if [ $live -eq 0 ]
+        then
+            url="$BASEURL/release/current/$ARCH/iso-cd/debian-$version-$ARCH-netinst.iso"
+        else
+            url="$BASEURL/release/current-live/$ARCH/iso-hybrid/debian-live-$version-$ARCH-$DE.iso"
+        fi
+
+    elif [[ $arg =~ ^oldstable ]]
+    then
+
+        #
+        setversion $((stable-1))
+        if [ $live -eq 0 ]
+        then
+            url="$BASEURL/archive/latest-oldstable/$ARCH/iso-cd/debian-$version-$ARCH-netinst.iso"
+        else
+            url="$BASEURL/archive/latest-oldstable-live/$ARCH/iso-hybrid/debian-live-$version-$ARCH-$DE.iso"
+        fi
+
+    elif [[ $arg =~ ^oldoldstable ]]
+    then
+
+        #
+        setversion $((stable-2))
+        if [ $live -eq 0 ]
+        then
+            url="$BASEURL/archive/latest-oldoldstable/$ARCH/iso-cd/debian-$version-$ARCH-netinst.iso"
+        else
+            url="$BASEURL/archive/latest-oldoldstable-live/$ARCH/iso-hybrid/debian-live-$version-$ARCH-$DE.iso"
+        fi
+
+    else
+
+        #
+        setversion $arg
+        if [ $live -eq 0 ]
+        then
+            url="$BASEURL/archive/$version/$ARCH/iso-cd/debian-$version-$ARCH-netinst.iso"
+        else
+            url="$BASEURL/archive/$version-live/$ARCH/iso-hybrid/debian-live-$version-$ARCH-$DE.iso"
+        fi
+    fi
+
+    #
+    echo -n "downloading ${url##*/} ... "
+    $WGET --limit-rate="$LRATE" -nv -N -c "$url" -nd -P "$DESTDIR"
+    echo "done"
+
+done
+
