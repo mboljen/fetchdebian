@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Created:         Mo 2019-08-26 11:19:26 CEST
-# Last Modified:   Di 2021-04-27 00:36:08 CEST
+# Last Modified:   Do 2023-08-10 10:44:33 CEST
 #
 # fetchdebian:
 #   Downloads latest Debian installation media and saves
@@ -285,7 +285,14 @@ do
 
     #
     echo -n "downloading ${url##*/} ... "
-    $WGET --limit-rate="$LRATE" -nv -N -c "$url" -nd -P "$DESTDIR"
+    $WGET \
+        --limit-rate="$LRATE" \
+        --no-verbose \
+        --timestamping \
+        --continue \
+        --no-directories \
+        --directory-prefix="$DESTDIR" \
+            "$url"
     echo "done"
 
 done
