@@ -1,6 +1,11 @@
 # fetchdebian
 
-This bash script downloads the latest Debian installer image to the current working directory.
+Download Debian installation media files
+
+
+## Description
+
+This script downloads the latest Debian installer image to the current working directory.
 
 
 ## Synopsis
