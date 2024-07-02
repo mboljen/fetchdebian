@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
 #
 # Created:         Mo 2019-08-26 11:19:26 CEST
-# Last Modified:   Do 2023-08-10 10:44:33 CEST
+# Last Modified:   Di 2024-07-02 19:49:41 CEST
 #
 # fetchdebian:
-#   Downloads latest Debian installation media and saves
-#   the downloaded files to the given path.
-
+#   Download latest Debian image and save to given location
 
 # Help text
 usage () {
 cat << EOF
+Download latest Debian image and save to given location
 
 Usage: fetchdebian [options] [codename]
 
-OPTIONS:
-  -p <path>   Specify download folder (default: current directory)
-  -a <arch>   Specify software architecture (default: amd64)
-  -d <name>   Specify desktop environment (default: gnome)
-  -u <url>    Specify URL of server (default: https://cdimage.debian.org/cdimage)
-  -l <rate>   Limit bandwidth (default: 4M)
+Options:
+  -p PATH     Specify download folder (default: current directory)
+  -a ARCH     Specify software architecture (default: amd64)
+  -d NAME     Specify desktop environment (default: gnome)
+  -u URL      Specify URL of server (default: https://cdimage.debian.org/cdimage)
+  -l RATE     Limit bandwidth (default: 4M)
   -h          Show this message
 EOF
 }

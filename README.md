@@ -3,11 +3,6 @@
 Download Debian installation media files
 
 
-## Description
-
-This script downloads the latest Debian installer image to the current working directory.
-
-
 ## Synopsis
 
 The following command will download the corresponding Debian installer image file to the current working directory.
@@ -37,13 +32,18 @@ According to the current development status of Debian, you can use the following
 Append the suffix `-live` is appended to the codename, the script will download the image file of the corresponding Debian Live system.
 
 
+## Description
+
+This script downloads the latest Debian installer image to the current working directory.
+
+
 ## Options
 
-+ `-p path`
++ `-p` _path_
 
   Specify download directory.  Default is current working directory.
 
-+ `-a arch`
++ `-a` _arch_
 
   Select one of the following software architectures.  Default is `amd64`.
 
@@ -61,8 +61,7 @@ Append the suffix `-live` is appended to the codename, the script will download 
   - `source`
   - `trace`
 
-
-+ `-d desktop`
++ `-d` _desktop_
 
   Select one of the following desktop environments for Live systems.  Default is `gnome`.
 
@@ -75,11 +74,11 @@ Append the suffix `-live` is appended to the codename, the script will download 
   - `standard`
   - `xfce`
 
-+ `-u url`
++ `-u` _url_
 
   Specify the base URL of the download location.  Default is `https://cdimage.debian.org/cdimage`.
 
-+ `-l rate`
++ `-l` _rate_
 
   Specify the maximal download bandwidth.  The default is `4M`.
 
